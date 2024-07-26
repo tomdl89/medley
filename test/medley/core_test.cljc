@@ -373,6 +373,33 @@
                       [1 3 5 6 8 9])
            [[1 3 5] [6]]))))
 
+(deftest test-partition-without
+  (testing "sequences"
+    (is (= (m/partition-without identity nil) '()))
+    (is (= (m/partition-without even? [1 3 5 6 9 11 12 13]) '((1 3 5) (9 11) (13))))
+    (is (= (m/partition-without even? [1 3 5 7 9]) '((1 3 5 7 9))))
+    (is (= (m/partition-without even? [2 3 4]) '((3))))
+    (is (= (m/partition-without even? [2]) '()))
+    (is (= (m/partition-without even? [3]) '((3))))
+    (is (= (m/partition-without even? [2 4 5 6]) '(() (5))))
+    (is (= (take 3 (m/partition-without even? (range))) '((1) (3) (5)))))
+
+  (testing "transducers"
+    (is (= (transduce (m/partition-without identity) conj nil) []))
+    (is (= (transduce (m/partition-without even?) conj [1 3 5 6 9 11 12 13])
+           [[1 3 5] [9 11] [13]]))
+    (is (= (sequence (m/partition-without even?) [1 3 5 7 9]) '([1 3 5 7 9])))
+    (is (= (into [] (m/partition-without even?) [2 3 4]) [[3]]))
+    (is (= (into [] (m/partition-without even?) [2]) []))
+    (is (= (into [] (m/partition-without even?) [3]) [[3]]))
+    (is (= (into [] (m/partition-without even?) [2 4 5 6]) [[] [5]]))
+    (is (= (transduce (m/partition-without even?)
+                      (completing (fn [coll x]
+                                    (cond-> (conj coll x) (= [7] x) reduced)))
+                      []
+                      [1 3 5 6 7 8 9])
+           [[1 3 5] [7]]))))
+
 (deftest test-partition-between
   (testing "sequences"
     (is (= (m/partition-between = nil) '()))

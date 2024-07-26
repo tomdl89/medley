@@ -506,6 +506,49 @@
   ([pred coll]
    (partition-between (fn [_ x] (pred x)) coll)))
 
+(defn partition-without
+  "Returns a lazy sequence of partitions, splitting where `(pred item)` returns
+  true, but excluding it. Returns a stateful transducer when no collection is
+  provided."
+  {:added "1.9.0"}
+  ([pred]
+   (fn [rf]
+     (let [part #?(:clj (java.util.ArrayList.) :cljs (array-list))
+           ever-split? (volatile! false)]
+       (fn
+         ([] (rf))
+         ([result]
+          (rf (if (.isEmpty part)
+                result
+                (let [v (vec (.toArray part))]
+                  (.clear part)
+                  (unreduced (rf result v))))))
+         ([result x]
+          (cond (not (pred x))
+                (do (.add part x) result)
+
+                (not (.isEmpty part))
+                (let [result (rf result (vec (.toArray part)))]
+                  (.clear part)
+                  (vreset! ever-split? true)
+                  result)
+
+                @ever-split?
+                (rf result [])
+
+                :else
+                (do (vreset! ever-split? true)
+                    result)))))))
+  ([pred coll]
+   (letfn [(part [coll]
+             (when-let [s (seq coll)]
+               (let [run (take-while (complement pred) s)]
+                 (cons run (lazy-seq (part (drop (inc (count run)) s)))))))]
+     (lazy-seq
+      (if-let [run (seq (take-while (complement pred) coll))]
+        (cons run (lazy-seq (part (drop (inc (count run)) coll))))
+        (part (rest coll)))))))
+
 (defn indexed
   "Returns an ordered, lazy sequence of vectors `[index item]`, where item is a
   value in coll, and index its position starting from zero. Returns a stateful
