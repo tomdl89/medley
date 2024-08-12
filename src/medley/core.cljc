@@ -96,7 +96,9 @@
 (defn- reduce-map [f coll]
   (let [coll' (if (record? coll) (into {} coll) coll)]
     (if (editable? coll')
-      (persistent! (reduce-kv (f assoc!) (transient (empty coll')) coll'))
+      (with-meta
+        (persistent! (reduce-kv (f assoc!) (transient (empty coll')) coll'))
+        (meta coll))
       (reduce-kv (f assoc) (empty coll') coll'))))
 
 (defn map-entry
